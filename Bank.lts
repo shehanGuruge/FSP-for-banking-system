@@ -1,0 +1,35 @@
+const MAX_TRANSACTION = 2
+const MIN_TRANSACTION = 1
+range TRANSACTION = MIN_TRANSACTION..MAX_TRANSACTION // The same amount will be transacted by all the 4 actors.
+range BALANCE_OLD = 5..5
+range BALANCE_NEW = 3..7
+set Actors = {student, grandMother, loanCompany, university}
+
+BANKACCOUNT = (readBalance[initBalance:BALANCE_OLD] -> 
+			  (withdraw[transactionAmount:TRANSACTION]  -> calculateBalance[newBalance:BALANCE_NEW] -> updateAccount[newBalance] -> BANKACCOUNT |
+			   deposit[transactionAmount:TRANSACTION]  -> calculateBalance[newBalance:BALANCE_NEW] -> updateAccount[newBalance] -> BANKACCOUNT)).
+
+STUDENT = ( readBalance[balance:BALANCE_OLD] -> WITHDRAW[balance] ),
+WITHDRAW [balance:BALANCE_OLD] = ( withdraw[withdrawalAmount:TRANSACTION] -> CALCULATEBALANCE[balance-withdrawalAmount] [withdrawalAmount] ),
+CALCULATEBALANCE [balance:BALANCE_NEW] [withdrawalAmount:TRANSACTION] = ( calculateBalance[balance] -> BUYPHONE[balance] [withdrawalAmount] ),
+BUYPHONE [balance:BALANCE_NEW] [withdrawalAmount:TRANSACTION] = (buySamsungPhone[withdrawalAmount] -> updateAccount[balance] -> STUDENT ) +{deposit[TRANSACTION]}.
+
+GRANDMOTHER = ( readGrandsonsBalance[balance:BALANCE_OLD] -> DEPOSIT[balance] ),
+DEPOSIT [balance:BALANCE_OLD] = ( deposit[birthdayGift:TRANSACTION] -> CALCULATEBALANCE[balance+birthdayGift]),
+CALCULATEBALANCE [balance:BALANCE_NEW] = ( calculateBalance[balance] -> updateGrandsonsAccount[balance] -> SENDECARD ),
+SENDECARD = ( sendECard -> GRANDMOTHER )  +{withdraw[TRANSACTION]}.
+
+LOANCOMPANY = ( readCustomerBalance[balance:BALANCE_OLD] -> DEPOSIT[balance] ),
+DEPOSIT [balance:BALANCE_OLD] = ( deposit[loanAmount:TRANSACTION] -> CALCULATEBALANCE[balance+loanAmount] ),
+CALCULATEBALANCE [balance:BALANCE_NEW] = ( calculateBalance[balance] -> updateCustomerAccount[balance] ->  LOANCOMPANY )  +{withdraw[TRANSACTION]}.
+
+UNIVERSITY = ( readStudentBalance[balance:BALANCE_OLD] -> WITHDRAW[balance] ),
+WITHDRAW [balance:BALANCE_OLD] = ( withdraw[semesterPayment:TRANSACTION] -> CALCULATEBALANCE[balance-semesterPayment] ),
+CALCULATEBALANCE [balance:BALANCE_NEW] = ( calculateBalance[balance] -> updateStudentAccount[balance] -> UNIVERSITY )  +{deposit[TRANSACTION]}.
+
+
+|| BANKING_SYSTEM = (student : STUDENT
+						|| grandMother : GRANDMOTHER /{grandMother.readBalance/grandMother.readGrandsonsBalance,grandMother.updateAccount/grandMother.updateGrandsonsAccount}
+						|| loanCompany : LOANCOMPANY /{loanCompany.readBalance/loanCompany.readCustomerBalance,loanCompany.updateAccount/loanCompany.updateCustomerAccount}
+						|| university : UNIVERSITY /{university.readBalance/university.readStudentBalance,university.updateAccount/university.updateStudentAccount}
+						|| Actors  :: BANKACCOUNT). 
